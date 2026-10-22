@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Configuracion</title>
+  <link rel="stylesheet" href="css/iroom.css">
+  <style>
+    /* Ventana modal única (sustituye a alert) */
+    dialog#modal {
+      border: 2px solid #777;
+      border-radius: 6px;
+      padding: 20px;
+      max-width: 440px;
+      font-family: inherit;
+    }
+    dialog#modal::backdrop { background: rgba(0, 0, 0, 0.5); }
+    dialog#modal h2 { margin-top: 0; font-size: 1.1rem; }
+    dialog#modal.error h2 { color: #b00020; }
+    dialog#modal.aviso h2 { color: #a15c00; }
+    dialog#modal ul { padding-left: 20px; }
+    dialog#modal button { padding: 8px 16px; cursor: pointer; font-weight: bold; }
+
+    .error-texto { color: #b00020; }
+    .aviso-texto { color: #a15c00; min-height: 1.2em; margin: 2px 0 0; font-size: 0.9rem; }
+
+    .gps-enlace { margin: 2px 0 0; font-size: 0.9rem; min-height: 1.2em; }
+
+    /* Indicador de longitud de contraseña */
+    .pw-indicador { margin: 2px 0 0; font-size: 0.9rem; min-height: 1.2em; }
+    .pw-indicador small { display: block; color: #555; }
+    .nv-0 { color: #b00020; }
+    .nv-1 { color: #a15c00; }
+    .nv-2 { color: #6b7d00; }
+    .nv-3 { color: #1b7a1b; }
+  </style>
+</head>
+
+<body>
+<main class="contenedor1">
+    <header><h1>SmartRoom Configuration</h1></header>
+
+    <form action="datos" method="post" enctype="multipart/form-data" id="formconfig" class="formulario" novalidate>
+
+    <section class="columna">
+        <h2>Datos de la habitación</h2>
+
+        <div class="campo">
+          <label for="pais">País:</label>
+          <input type="text" id="pais" name="pais" list="lista-paises" placeholder="Seleccione o escriba..." required>
+          <datalist id="lista-paises">
+            <option value="España">
+            <option value="Francia">
+            <option value="Portugal">
+            <option value="Italia">
+            <option value="Alemania">
+          </datalist>
+        </div>
+
+        <div class="campo">
+          <label for="ciudad">Ciudad:</label>
+          <input type="text" id="ciudad" name="ciudad" required>
+        </div>
+
+        <div class="campo">
+          <label for="gps">Coordenadas GPS:</label>
+          <input type="text" id="gps" name="gps" placeholder="Ej: 40.5133, -3.3494 o N 40º 30' 45.00&quot;, O 3º 20' 54.00&quot;">
+          <p id="enlace-gps" class="gps-enlace" aria-live="polite"></p>
+        </div>
+
+        <div class="campo">
+          <label for="mapa-url">Mapa URL:</label>
+          <input type="url" id="mapa-url" name="mapa-url" placeholder="https://maps.google.com/...">
+        </div>
+
+        <div class="campo">
+          <label for="foto">Foto:</label>
+          <input type="file" id="foto" name="foto" accept="image/*">
+        </div>
+
+        <div class="campo">
+          <label for="password">Password (mínimo 9 caracteres):</label>
+          <input type="password" id="password" name="password" required>
+          <p id="pw-indicador" class="pw-indicador" aria-live="polite"></p>
+        </div>
+
+        <div class="campo-submit">
+          <button type="submit" id="btn-enviar">Enviar datos</button>
+        </div>
+    </section>
+
+    <section class="columna">
+        <h2>Seleccione Sensor</h2>
+        <fieldset class="cajas">
+          <legend>sensores disponibles</legend>
+
+          <label><input type="checkbox" name="sensor" value="temperatura"> Temperatura</label>
+          <label><input type="checkbox" name="sensor" value="humedad"> Humedad</label>
+          <label><input type="checkbox" name="sensor" value="sonido"> Nivel de sonido</label>
+          <label><input type="checkbox" name="sensor" value="luz"> Nivel de luz</label>
+          <label><input type="checkbox" name="sensor" value="movimiento"> Movimiento</label>
+        </fieldset>
+
+        <h2>Lectura actual</h2>
+        <div class="campo">
+          <label for="tempactual">Temperatura actual (°C):</label>
+          <input type="text" id="tempactual" name="tempactual" inputmode="decimal" placeholder="Ej: 23.5" required>
+          <p id="aviso-temp" class="aviso-texto" aria-live="polite"></p>
+        </div>
+
+        <h2>Alertas</h2>
+        <div class="campo">
+          <label for="tempmax">Temperatura máxima:</label>
+          <input type="number" id="tempmax" name="tempmax" min="-20" max="45" step="0.5">
+        </div>
+
+        <div class="campo">
+          <label for="tempmin">Temperatura mínima:</label>
+          <input type="number" id="tempmin" name="tempmin" min="-20" max="45" step="0.5">
+        </div>
+
+        <div class="campo campo-output">
+          <label for="dif-temp">Diferencia térmica:</label>
+          <output id="dif-temp" name="dif-temp" for="tempmax tempmin">-- °C</output>
+        </div>
+    </section>
+
+    </form>
+
+    <footer>
+      <a href="index.html">INICIO</a>
+    </footer>
+</main>
+
+<!-- Única ventana modal para errores y avisos -->
+<dialog id="modal" aria-labelledby="modal-titulo">
+  <h2 id="modal-titulo"></h2>
+  <ul id="modal-lista"></ul>
+  <button type="button" id="modal-cerrar">Aceptar</button>
+</dialog>
+
+<script>
+  /* ================= Configuración ================= */
+  const TEMP_OK_MIN = 22;       // intervalo inclusivo sin advertencia
+  const TEMP_OK_MAX = 26;
+  const PW_MIN = 9;             // longitud mínima de la contraseña
+
+  // Intervalos orientativos de longitud (ajustar a los del enunciado)
+  const PW_NIVELES = [
+    { min: 9,  max: 11,       texto: "Corta", clase: "nv-1" },
+    { min: 12, max: 15,       texto: "Media", clase: "nv-2" },
+    { min: 16, max: Infinity, texto: "Larga", clase: "nv-3" }
+  ];
+
+  /* ================= Elementos ================= */
+  const form      = document.getElementById('formconfig');
+  const pais      = document.getElementById('pais');
+  const ciudad    = document.getElementById('ciudad');
+  const gps       = document.getElementById('gps');
+  const enlaceGps = document.getElementById('enlace-gps');
+  const mapaUrl   = document.getElementById('mapa-url');
+  const password  = document.getElementById('password');
+  const pwInd     = document.getElementById('pw-indicador');
+  const tempActual = document.getElementById('tempactual');
+  const avisoTemp = document.getElementById('aviso-temp');
+  const tempMax   = document.getElementById('tempmax');
+  const tempMin   = document.getElementById('tempmin');
+  const difTemp   = document.getElementById('dif-temp');
+
+  const modal       = document.getElementById('modal');
+  const modalTitulo = document.getElementById('modal-titulo');
+  const modalLista  = document.getElementById('modal-lista');
+  const modalCerrar = document.getElementById('modal-cerrar');
+
+  /* ================= Utilidades ================= */
+  // Devuelve un número o NaN si el formato no es válido (admite coma decimal)
+  function parseNumero(texto) {
+    const t = texto.trim().replace(',', '.');
+    if (!/^[+-]?\d+(\.\d+)?$/.test(t)) return NaN;
+    return parseFloat(t);
+  }
+
+  /* ================= Coordenadas GPS y enlace a Google Maps ================= */
+  // Convierte un ángulo (latitud o longitud) a grados decimales.
+  // Admite: 40.513 | -3.3486 | N 40º 30' 45.00" | 3º 20' 54.00" O | -3º 20' 54"
+  // Devuelve NaN si el formato o el rango no son válidos.
+  function parseAngulo(texto, esLatitud) {
+    const t = texto.trim();
+    const limite = esLatitud ? 90 : 180;
+    const letrasValidas = esLatitud ? 'NS' : 'EWO';
+    let valor, negativo;
+
+    const dec = t.match(/^([+-])?(\d+(?:\.\d+)?)$/);
+    const dms = t.match(/^([NSEWO])?\s*([+-])?\s*(\d+(?:\.\d+)?)\s*[º°]\s*(?:(\d+(?:\.\d+)?)\s*['’′]\s*(?:(\d+(?:\.\d+)?)\s*(?:"|”|″|''|’’)\s*)?)?([NSEWO])?$/i);
+
+    if (dec) {
+      valor = parseFloat(dec[2]);
+      negativo = dec[1] === '-';
+    } else if (dms) {
+      if (dms[1] && dms[6]) return NaN;                 // hemisferio duplicado
+      const letra = (dms[1] || dms[6] || '').toUpperCase();
+      if (letra && !letrasValidas.includes(letra)) return NaN;
+      const grados = parseFloat(dms[3]);
+      const minutos = dms[4] ? parseFloat(dms[4]) : 0;
+      const segundos = dms[5] ? parseFloat(dms[5]) : 0;
+      if (minutos >= 60 || segundos >= 60) return NaN;
+      valor = grados + minutos / 60 + segundos / 3600;
+      negativo = dms[2] === '-' || letra === 'S' || letra === 'W' || letra === 'O';
+    } else {
+      return NaN;
+    }
+
+    if (valor > limite) return NaN;
+    return negativo ? -valor : valor;
+  }
+
+  // "latitud, longitud" -> { lat, lon } en grados decimales, o null
+  function parseCoordenadas(texto) {
+    const partes = texto.split(',');
+    if (partes.length !== 2) return null;
+    const lat = parseAngulo(partes[0], true);
+    const lon = parseAngulo(partes[1], false);
+    if (isNaN(lat) || isNaN(lon)) return null;
+    return { lat: parseFloat(lat.toFixed(6)), lon: parseFloat(lon.toFixed(6)) };
+  }
+
+  function actualizarEnlaceGps() {
+    enlaceGps.textContent = '';
+    enlaceGps.classList.remove('error-texto');
+    const txt = gps.value.trim();
+    if (txt === '') return;
+
+    const c = parseCoordenadas(txt);
+    if (!c) {
+      enlaceGps.textContent = 'Formato de coordenadas no reconocido.';
+      enlaceGps.classList.add('error-texto');
+      return;
+    }
+    const a = document.createElement('a');
+    a.href = `https://maps.google.com/maps?q=${c.lat},${c.lon}`;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.textContent = `Ver en Google Maps (${c.lat}, ${c.lon})`;
+    enlaceGps.appendChild(a);
+  }
+
+  gps.addEventListener('input', actualizarEnlaceGps);
+
+  // Países permitidos: se leen del <datalist> para no duplicar la lista
+  function paisesPermitidos() {
+    return Array.from(document.querySelectorAll('#lista-paises option'))
+      .map(o => o.value.trim().toLowerCase());
+  }
+
+  /* ================= Ventana modal única ================= */
+  let alContinuar = null;
+
+  function mostrarModal(tipo, titulo, mensajes, callback) {
+    modal.className = tipo;               // "error" o "aviso"
+    modalTitulo.textContent = titulo;
+    modalLista.innerHTML = '';
+    mensajes.forEach(m => {
+      const li = document.createElement('li');
+      li.textContent = m;
+      modalLista.appendChild(li);
+    });
+    alContinuar = callback || null;
+    modalCerrar.textContent = callback ? 'Continuar' : 'Aceptar';
+    modal.showModal();
+  }
+
+  modalCerrar.addEventListener('click', () => {
+    modal.close();
+    const cb = alContinuar;
+    alContinuar = null;
+    if (cb) cb();
+  });
+
+  /* ================= Temperatura actual (aviso en vivo) ================= */
+  function avisoTemperatura() {
+    const valor = parseNumero(tempActual.value);
+    if (!isNaN(valor) && (valor < TEMP_OK_MIN || valor > TEMP_OK_MAX)) {
+      return `Aviso: ${valor} °C está fuera del intervalo ${TEMP_OK_MIN}–${TEMP_OK_MAX} °C.`;
+    }
+    return '';
+  }
+
+  tempActual.addEventListener('input', () => {
+    avisoTemp.textContent = avisoTemperatura();
+  });
+
+  /* ================= Indicador de longitud de contraseña ================= */
+  function actualizarIndicador() {
+    const len = password.value.length;
+    if (len === 0) { pwInd.innerHTML = ''; return; }
+
+    let texto, clase;
+    if (len < PW_MIN) {
+      texto = `Insuficiente (${len}/${PW_MIN} caracteres)`;
+      clase = 'nv-0';
+    } else {
+      const nivel = PW_NIVELES.find(n => len >= n.min && len <= n.max);
+      texto = `${nivel.texto} (${len} caracteres)`;
+      clase = nivel.clase;
+    }
+    pwInd.innerHTML = '';
+    const linea = document.createElement('span');
+    linea.className = clase;
+    linea.textContent = `Evaluación de longitud: ${texto}`;
+    const nota = document.createElement('small');
+    nota.textContent = 'Indicador orientativo basado solo en la longitud; no garantiza la seguridad.';
+    pwInd.append(linea, nota);
+  }
+
+  password.addEventListener('input', actualizarIndicador);
+
+  /* ================= Diferencia térmica ================= */
+  function actualizarDiferencia() {
+    const maxVal = parseFloat(tempMax.value);
+    const minVal = parseFloat(tempMin.value);
+
+    if (!isNaN(maxVal) && !isNaN(minVal)) {
+      if (maxVal < minVal) {
+        difTemp.textContent = "Error: La máx. debe ser ≥ mín.";
+        difTemp.classList.add("error-texto");
+      } else {
+        difTemp.textContent = (maxVal - minVal).toFixed(1) + " °C";
+        difTemp.classList.remove("error-texto");
+      }
+    } else {
+      difTemp.textContent = "-- °C";
+      difTemp.classList.remove("error-texto");
+    }
+  }
+
+  tempMax.addEventListener('input', actualizarDiferencia);
+  tempMin.addEventListener('input', actualizarDiferencia);
+
+  /* ================= Validación del formulario ================= */
+  function validar() {
+    const errores = [];   // { campo, msg }
+    const avisos = [];
+
+    // País: obligatorio, en la lista, sin espacios extremos ni distinguir mayúsculas
+    const paisTxt = pais.value.trim().toLowerCase();
+    if (paisTxt === '') {
+      errores.push({ campo: pais, msg: 'El país es obligatorio.' });
+    } else if (!paisesPermitidos().includes(paisTxt)) {
+      errores.push({ campo: pais, msg: 'El país indicado no está en la lista de países permitidos.' });
+    }
+
+    // Ciudad obligatoria
+    if (ciudad.value.trim() === '') {
+      errores.push({ campo: ciudad, msg: 'La ciudad es obligatoria.' });
+    }
+
+    // GPS (opcional): "latitud, longitud" en decimal o en grados, minutos y segundos
+    if (gps.value.trim() !== '' && !parseCoordenadas(gps.value)) {
+      errores.push({ campo: gps, msg: 'Las coordenadas GPS no son válidas. Use "latitud, longitud" en grados decimales (40.5133, -3.3494) o en grados, minutos y segundos (N 40º 30\' 45.00", O 3º 20\' 54.00"). Latitud entre -90 y 90, longitud entre -180 y 180.' });
+    }
+
+    // URL del mapa (opcional)
+    if (mapaUrl.value.trim() !== '') {
+      let ok = false;
+      try {
+        const u = new URL(mapaUrl.value.trim());
+        ok = (u.protocol === 'http:' || u.protocol === 'https:');
+      } catch (e) { ok = false; }
+      if (!ok) {
+        errores.push({ campo: mapaUrl, msg: 'La URL del mapa no es válida (debe empezar por http:// o https://).' });
+      }
+    }
+
+    // Contraseña: obligatoria, mínimo 9 caracteres
+    if (password.value === '') {
+      errores.push({ campo: password, msg: 'La contraseña es obligatoria.' });
+    } else if (password.value.length < PW_MIN) {
+      errores.push({ campo: password, msg: `La contraseña debe tener al menos ${PW_MIN} caracteres.` });
+    }
+
+    // Temperatura actual: obligatoria y numérica; fuera de 22–26 solo avisa
+    if (tempActual.value.trim() === '') {
+      errores.push({ campo: tempActual, msg: 'La temperatura actual es obligatoria.' });
+    } else if (isNaN(parseNumero(tempActual.value))) {
+      errores.push({ campo: tempActual, msg: 'La temperatura actual debe ser un número válido (por ejemplo, 23.5).' });
+    } else {
+      const aviso = avisoTemperatura();
+      if (aviso) avisos.push(aviso);
+    }
+
+    // Alertas de temperatura (opcionales): número en rango y máx ≥ mín
+    const maxTxt = tempMax.value.trim();
+    const minTxt = tempMin.value.trim();
+    const maxVal = parseFloat(maxTxt);
+    const minVal = parseFloat(minTxt);
+
+    if (maxTxt !== '' && (isNaN(maxVal) || maxVal < -20 || maxVal > 45)) {
+      errores.push({ campo: tempMax, msg: 'La temperatura máxima debe ser un número entre -20 y 45.' });
+    }
+    if (minTxt !== '' && (isNaN(minVal) || minVal < -20 || minVal > 45)) {
+      errores.push({ campo: tempMin, msg: 'La temperatura mínima debe ser un número entre -20 y 45.' });
+    }
+    if (!isNaN(maxVal) && !isNaN(minVal) && maxVal < minVal) {
+      errores.push({ campo: tempMax, msg: 'La temperatura máxima no puede ser inferior a la mínima.' });
+    }
+
+    return { errores, avisos };
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const { errores, avisos } = validar();
+
+    if (errores.length > 0) {
+      mostrarModal('error', 'Revise los datos introducidos', errores.map(x => x.msg));
+      modal.addEventListener('close', () => errores[0].campo.focus(), { once: true });
+      return;
+    }
+
+    if (avisos.length > 0) {
+      // La advertencia no impide registrar la lectura
+      mostrarModal('aviso', 'Advertencia', avisos, () => form.submit());
+      return;
+    }
+
+    form.submit();
+  });
+</script>
+
+</body>
+</html>
