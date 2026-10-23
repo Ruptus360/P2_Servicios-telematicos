@@ -103,7 +103,6 @@
     </footer>
 </main>
 
-<!-- Única ventana modal para errores y avisos -->
 <dialog id="modal" aria-labelledby="modal-titulo">
   <h2 id="modal-titulo"></h2>
   <ul id="modal-lista"></ul>
@@ -111,19 +110,17 @@
 </dialog>
 
 <script>
-  /* ================= Configuración ================= */
-  const TEMP_OK_MIN = 22;       // intervalo inclusivo sin advertencia
+ 
   const TEMP_OK_MAX = 26;
-  const PW_MIN = 9;             // longitud mínima de la contraseña
+  const PW_MIN = 9;             
 
-  // Intervalos orientativos de longitud (ajustar a los del enunciado)
   const PW_NIVELES = [
     { min: 9,  max: 11,       texto: "Corta", clase: "nv-1" },
     { min: 12, max: 15,       texto: "Media", clase: "nv-2" },
     { min: 16, max: Infinity, texto: "Larga", clase: "nv-3" }
   ];
 
-  /* ================= Elementos ================= */
+
   const form      = document.getElementById('formconfig');
   const pais      = document.getElementById('pais');
   const ciudad    = document.getElementById('ciudad');
@@ -151,10 +148,7 @@
     return parseFloat(t);
   }
 
-  /* ================= Coordenadas GPS y enlace a Google Maps ================= */
-  // Convierte un ángulo (latitud o longitud) a grados decimales.
-  // Admite: 40.513 | -3.3486 | N 40º 30' 45.00" | 3º 20' 54.00" O | -3º 20' 54"
-  // Devuelve NaN si el formato o el rango no son válidos.
+  
   function parseAngulo(texto, esLatitud) {
     const t = texto.trim();
     const limite = esLatitud ? 90 : 180;
@@ -168,7 +162,7 @@
       valor = parseFloat(dec[2]);
       negativo = dec[1] === '-';
     } else if (dms) {
-      if (dms[1] && dms[6]) return NaN;                 // hemisferio duplicado
+      if (dms[1] && dms[6]) return NaN;                
       const letra = (dms[1] || dms[6] || '').toUpperCase();
       if (letra && !letrasValidas.includes(letra)) return NaN;
       const grados = parseFloat(dms[3]);
@@ -185,7 +179,7 @@
     return negativo ? -valor : valor;
   }
 
-  // "latitud, longitud" -> { lat, lon } en grados decimales, o null
+
   function parseCoordenadas(texto) {
     const partes = texto.split(',');
     if (partes.length !== 2) return null;
@@ -217,17 +211,16 @@
 
   gps.addEventListener('input', actualizarEnlaceGps);
 
-  // Países permitidos: se leen del <datalist> para no duplicar la lista
   function paisesPermitidos() {
     return Array.from(document.querySelectorAll('#lista-paises option'))
       .map(o => o.value.trim().toLowerCase());
   }
 
-  /* ================= Ventana modal única ================= */
+  
   let alContinuar = null;
 
   function mostrarModal(tipo, titulo, mensajes, callback) {
-    modal.className = tipo;               // "error" o "aviso"
+    modal.className = tipo;              
     modalTitulo.textContent = titulo;
     modalLista.innerHTML = '';
     mensajes.forEach(m => {
@@ -247,7 +240,6 @@
     if (cb) cb();
   });
 
-  /* ================= Temperatura actual (aviso en vivo) ================= */
   function avisoTemperatura() {
     const valor = parseNumero(tempActual.value);
     if (!isNaN(valor) && (valor < TEMP_OK_MIN || valor > TEMP_OK_MAX)) {
@@ -260,7 +252,7 @@
     avisoTemp.textContent = avisoTemperatura();
   });
 
-  /* ================= Indicador de longitud de contraseña ================= */
+
   function actualizarIndicador() {
     const len = password.value.length;
     if (len === 0) { pwInd.innerHTML = ''; return; }
@@ -285,7 +277,7 @@
 
   password.addEventListener('input', actualizarIndicador);
 
-  /* ================= Diferencia térmica ================= */
+ 
   function actualizarDiferencia() {
     const maxVal = parseFloat(tempMax.value);
     const minVal = parseFloat(tempMin.value);
@@ -307,12 +299,12 @@
   tempMax.addEventListener('input', actualizarDiferencia);
   tempMin.addEventListener('input', actualizarDiferencia);
 
-  /* ================= Validación del formulario ================= */
+ 
   function validar() {
-    const errores = [];   // { campo, msg }
+    const errores = [];  
     const avisos = [];
 
-    // País: obligatorio, en la lista, sin espacios extremos ni distinguir mayúsculas
+    
     const paisTxt = pais.value.trim().toLowerCase();
     if (paisTxt === '') {
       errores.push({ campo: pais, msg: 'El país es obligatorio.' });
@@ -320,17 +312,16 @@
       errores.push({ campo: pais, msg: 'El país indicado no está en la lista de países permitidos.' });
     }
 
-    // Ciudad obligatoria
+    
     if (ciudad.value.trim() === '') {
       errores.push({ campo: ciudad, msg: 'La ciudad es obligatoria.' });
     }
 
-    // GPS (opcional): "latitud, longitud" en decimal o en grados, minutos y segundos
+
     if (gps.value.trim() !== '' && !parseCoordenadas(gps.value)) {
       errores.push({ campo: gps, msg: 'Las coordenadas GPS no son válidas. Use "latitud, longitud" en grados decimales (40.5133, -3.3494) o en grados, minutos y segundos (N 40º 30\' 45.00", O 3º 20\' 54.00"). Latitud entre -90 y 90, longitud entre -180 y 180.' });
     }
 
-    // URL del mapa (opcional)
     if (mapaUrl.value.trim() !== '') {
       let ok = false;
       try {
@@ -342,14 +333,13 @@
       }
     }
 
-    // Contraseña: obligatoria, mínimo 9 caracteres
+    
     if (password.value === '') {
       errores.push({ campo: password, msg: 'La contraseña es obligatoria.' });
     } else if (password.value.length < PW_MIN) {
       errores.push({ campo: password, msg: `La contraseña debe tener al menos ${PW_MIN} caracteres.` });
     }
 
-    // Temperatura actual: obligatoria y numérica; fuera de 22–26 solo avisa
     if (tempActual.value.trim() === '') {
       errores.push({ campo: tempActual, msg: 'La temperatura actual es obligatoria.' });
     } else if (isNaN(parseNumero(tempActual.value))) {
@@ -359,7 +349,7 @@
       if (aviso) avisos.push(aviso);
     }
 
-    // Alertas de temperatura (opcionales): número en rango y máx ≥ mín
+   
     const maxTxt = tempMax.value.trim();
     const minTxt = tempMin.value.trim();
     const maxVal = parseFloat(maxTxt);
@@ -389,7 +379,7 @@
     }
 
     if (avisos.length > 0) {
-      // La advertencia no impide registrar la lectura
+      
       mostrarModal('aviso', 'Advertencia', avisos, () => form.submit());
       return;
     }
