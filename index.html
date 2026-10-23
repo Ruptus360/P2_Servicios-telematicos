@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Smart Room Project</title>
+  <link rel="stylesheet" href="css/iroom.css">
+</head>
+
+<body>
+  <main class="contenedor1">
+
+    <header>
+      <h1>Smart Room Project</h1>
+    </header>
+
+    <nav aria-label="navegacion principal">
+      <ul class="nav-links">
+        <li><a href="#habitacion">Habitacion</a></li>
+        <li><a href="#sensores">Sensores</a></li>
+        <li><a href="config.html">Configuracion</a></li>
+        <li><a href="minombre.html">Nombre</a></li>
+        <li><a href="calculadora.html">calculadora</a></li>
+      </ul>
+    </nav>
+
+    <aside class="nav-info" id="informacion">
+      <h2>Información</h2>
+      <p id="saludo"></p>
+    </aside>
+
+    <section class="contenido" aria-label="Contenido principal">
+
+      <section class="columna" id="habitacion" aria-labelledby="titulo-habitacion">
+        <h2 id="titulo-habitacion">Datos de la habitación</h2>
+
+        <ul>
+          <li><strong>Nombre:</strong> Smart Room</li>
+          <li><strong>Ubicación:</strong> - </li>
+          <li><strong>Conectividad:</strong> - </li>
+        </ul>
+
+        <p>
+          Localización:
+          <a href="https://www.google.com/maps" target="_blank" rel="noopener noreferrer">
+            En Google Maps
+          </a>
+        </p>
+
+        <img
+          class="foto-habitacion"
+          src="./images/habitacion.jpg"
+          alt="Imagen representativa de la Smart Room"
+        />
+      </section>
+
+      <section class="columna" id="sensores" aria-labelledby="titulo-sensores">
+        <h2 id="titulo-sensores">Datos de los sensores</h2>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Sensor</th>
+              <th>Valor</th>
+              <th>Unidad</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Temperatura:</td>
+              <td>23</td>
+              <td>°C</td>
+            </tr>
+            <tr>
+              <td>Humedad</td>
+              <td>45</td>
+              <td>%</td>
+            </tr>
+            <tr>
+              <td>Nivel de luz</td>
+              <td>680</td>
+              <td>luz</td>
+            </tr>
+            <tr>
+              <td>Movimiento</td>
+              <td>—</td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+    </section>
+
+    <footer>
+      <h2><img class="uahlogo" src="images/uahlogo.jpg" alt="Logo de la Universidad de Alcalá"></h2>
+    </footer>
+
+  </main>
+
+  <script>
+    const fname = localStorage.getItem("fname") || "invitado";
+    document.getElementById("saludo").textContent =
+      `Hola, ${fname}! Bienvenido a Smart Room.`;
+  </script>
+</body>
+</html>
