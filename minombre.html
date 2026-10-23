@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Nombre</title>
+  <link rel="stylesheet" href="css/iroom.css">
+</head>
+
+<body>
+  <main class="contenedor1">
+    <header>
+      <h1>Smart Room Project Nombre</h1>
+    </header>
+
+    <nav aria-label="navegacion principal">
+      <ul class="nav-links">
+        <li><a href="index.html">Inicio</a></li>
+        <li><a href="config.html" target="_blank" rel="noopener noreferrer">Configuracion</a></li>
+      </ul>
+    </nav>
+
+    <aside class="nav-info" aria-label="Información adicional">
+      <h2>Informacion</h2>
+      <p id="saludo"></p>
+    </aside>
+
+    <section class="contenido" aria-label="Contenido principal">
+      <section class="columna">
+
+        <p>
+          <strong>Smart Room</strong>
+        </p>
+
+        <div class="campo">
+          <label for="nombre">Nombre:</label>
+          <input type="text" id="nombre" name="fname" value="Smart Room">
+        </div>
+
+        <div class="campo">
+          <label for="correo">Correo electrónico:</label>
+          <input type="text" id="correo" name="correo" placeholder="usuario@dominio.es" autocomplete="email">
+        </div>
+
+        <div class="campo-botones">
+          <button type="button" id="btn-cadenas">Verificar (cadenas)</button>
+          <button type="button" id="btn-regex">Verificar (expresión regular)</button>
+          <button type="button" id="btn-pruebas">Ejecutar casos de prueba</button>
+        </div>
+
+        <p id="resultado-correo" aria-live="polite"></p>
+        <div id="tabla-pruebas"></div>
+
+        <img
+          src="./images/logo-smartroom.png"
+          alt="Logo de Smart Room"
+        />
+
+      </section>
+    </section>
+
+    <footer>
+      <h2><a href="index.html">Universidad De Alcala</a></h2>
+    </footer>
+  </main>
+
+  <script>
+    const inputNombre = document.getElementById("nombre");
+    const saludo = document.getElementById("saludo");
+
+    // Recupera fname guardado, si existe
+    const guardado = localStorage.getItem("fname");
+    if (guardado) inputNombre.value = guardado;
+
+    function actualizarSaludo() {
+      const fname = inputNombre.value.trim();
+      localStorage.setItem("fname", fname);
+      saludo.textContent = `Hola, ${fname || "invitado"}! Bienvenido a Smart Room.`;
+    }
+
+    inputNombre.addEventListener("input", actualizarSaludo);
+    actualizarSaludo();
+
+    
+
+    const LETRAS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const DIGITOS = "0123456789";
+
+    // V1
+    function validarCorreoCadenas(correo) {
+      const arroba = correo.indexOf("@");
+      if (arroba === -1 || arroba !== correo.lastIndexOf("@")) return false;
+
+      const usuario = correo.substring(0, arroba);
+      const dominio = correo.substring(arroba + 1);
+      if (usuario.length === 0 || dominio.length === 0) return false;
+
+      const permitidosUsuario = LETRAS + DIGITOS + "._%+-";
+      for (const ch of usuario) {
+        if (!permitidosUsuario.includes(ch)) return false;
+      }
+
+      const etiquetas = dominio.split(".");
+      if (etiquetas.length < 2) return false;
+
+      const permitidosEtiqueta = LETRAS + DIGITOS + "-";
+      for (const etiqueta of etiquetas) {
+        if (etiqueta.length === 0) return false;
+        for (const ch of etiqueta) {
+          if (!permitidosEtiqueta.includes(ch)) return false;
+        }
+      }
+
+      const tld = etiquetas[etiquetas.length - 1];
+      if (tld.length < 2) return false;
+      for (const ch of tld) {
+        if (!LETRAS.includes(ch)) return false;
+      }
+      return true;
+    }
+
+    // V2
+    const REGEX_CORREO = /^[A-Za-z0-9._%+-]+@([A-Za-z0-9-]+\.)+[A-Za-z]{2,}$/;
+
+    function validarCorreoRegex(correo) {
+      return REGEX_CORREO.test(correo);
+    }
+
+    
+
+
+    const inputCorreo = document.getElementById("correo");
+    const resultadoCorreo = document.getElementById("resultado-correo");
+
+    function mostrarResultado(valido, metodo) {
+      resultadoCorreo.textContent = valido
+        ? `Correo válido (método: ${metodo}).`
+        : `Correo no válido (método: ${metodo}).`;
+      resultadoCorreo.className = valido ? "resultado-ok" : "resultado-error";
+    }
+
+    function verificar(funcionValidacion, metodo) {
+      const correo = inputCorreo.value.trim();
+      if (correo === "") {
+        resultadoCorreo.textContent = "Introduzca una dirección de correo.";
+        resultadoCorreo.className = "resultado-error";
+        return;
+      }
+      mostrarResultado(funcionValidacion(correo), metodo);
+    }
+
+    document.getElementById("btn-cadenas")
+      .addEventListener("click", () => verificar(validarCorreoCadenas, "cadenas"));
+    document.getElementById("btn-regex")
+      .addEventListener("click", () => verificar(validarCorreoRegex, "expresión regular"));
+
+    
+    const CASOS = [
+      { entrada: "usuario@gmail.com",            esperado: true  },
+      { entrada: "nombre.apellidos@edu.uah.es",  esperado: true  },
+      { entrada: "@dominio.es",                  esperado: false },
+      { entrada: "usuario@",                     esperado: false },
+      { entrada: "usuario@@dominio.es",          esperado: false },
+      { entrada: "usuario dominio@gmail.com",    esperado: false },
+      { entrada: "usuario@dominio",              esperado: false },
+      { entrada: "usuario@.es",                  esperado: false },
+      { entrada: "a.b@sub.dominio.edu.es",       esperado: true  }
+    ];
+
+    function ejecutarPruebas() {
+      const contenedor = document.getElementById("tabla-pruebas");
+      contenedor.innerHTML = "";
+
+      const tabla = document.createElement("table");
+      const cabecera = tabla.createTHead().insertRow();
+      ["Entrada", "Esperado", "Cadenas", "Regex", "Resultado"].forEach(t => {
+        const th = document.createElement("th");
+        th.textContent = t;
+        cabecera.appendChild(th);
+      });
+
+      const cuerpo = tabla.createTBody();
+      const texto = b => (b ? "Válida" : "Inválida");
+
+      CASOS.forEach(caso => {
+        const r1 = validarCorreoCadenas(caso.entrada);
+        const r2 = validarCorreoRegex(caso.entrada);
+        const ok = r1 === caso.esperado && r2 === caso.esperado;
+
+        const fila = cuerpo.insertRow();
+        [caso.entrada, texto(caso.esperado), texto(r1), texto(r2), ok ? "OK" : "FALLO"]
+          .forEach((valor, i) => {
+            const celda = fila.insertCell();
+            celda.textContent = valor;
+            if (i === 4) celda.className = ok ? "resultado-ok" : "resultado-error";
+          });
+      });
+
+      contenedor.appendChild(tabla);
+    }
+
+    document.getElementById("btn-pruebas").addEventListener("click", ejecutarPruebas);
+  </script>
+</body>
+</html>
