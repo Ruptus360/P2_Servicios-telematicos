@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Calculadora temperaturas</title>
+  <link rel="stylesheet" href="css/iroom.css">
+</head>
+
+<body>
+  <main class="contenedor1">
+
+    <header>
+      <h1>Calculadora de temperaturas</h1>
+    </header>
+
+    <nav aria-label="navegacion principal">
+      <ul class="nav-links">
+        <li><a href="index.html">Inicio</a></li>
+        <li><a href="config.html">Configuracion</a></li>
+        <li><a href="minombre.html">Nombre</a></li>
+        <li><a href="calculadora.html">Calculadora</a></li>
+      </ul>
+    </nav>
+
+    <section class="columna calculadora" id="calculadora" aria-labelledby="titulo-calc">
+      <h2 id="titulo-calc">Calculadora</h2>
+
+      <!-- Pantalla: valor y unidad del resultado -->
+      <div class="pantalla">
+        <p id="operacion" class="operacion"></p>
+        <output id="resultado" aria-live="polite">
+          <span id="valor">0</span> <span id="unidad">°C</span>
+        </output>
+      </div>
+      <p id="estado" class="aviso-calc" aria-live="polite"></p>
+
+      <!-- Botonera: operaciones básicas -->
+      <div class="botonera">
+        <button type="button" data-accion="limpiar">C</button>
+        <button type="button" data-accion="borrar" aria-label="Borrar último dígito">⌫</button>
+        <button type="button" data-accion="signo" aria-label="Cambiar signo">±</button>
+        <button type="button" data-accion="op" data-valor="/" aria-label="Dividir">÷</button>
+
+        <button type="button" data-accion="digito" data-valor="7">7</button>
+        <button type="button" data-accion="digito" data-valor="8">8</button>
+        <button type="button" data-accion="digito" data-valor="9">9</button>
+        <button type="button" data-accion="op" data-valor="*" aria-label="Multiplicar">×</button>
+
+        <button type="button" data-accion="digito" data-valor="4">4</button>
+        <button type="button" data-accion="digito" data-valor="5">5</button>
+        <button type="button" data-accion="digito" data-valor="6">6</button>
+        <button type="button" data-accion="op" data-valor="-" aria-label="Restar">−</button>
+
+        <button type="button" data-accion="digito" data-valor="1">1</button>
+        <button type="button" data-accion="digito" data-valor="2">2</button>
+        <button type="button" data-accion="digito" data-valor="3">3</button>
+        <button type="button" data-accion="op" data-valor="+" aria-label="Sumar">+</button>
+
+        <button type="button" class="ancho" data-accion="digito" data-valor="0">0</button>
+        <button type="button" data-accion="punto" aria-label="Punto decimal">.</button>
+        <button type="button" data-accion="igual" aria-label="Calcular">=</button>
+      </div>
+
+      <!-- Conversión directa entre escalas -->
+      <div class="conversion">
+        <span>Convertir a:</span>
+        <button type="button" data-accion="convertir" data-valor="C">°C</button>
+        <button type="button" data-accion="convertir" data-valor="K">K</button>
+        <button type="button" data-accion="convertir" data-valor="F">°F</button>
+      </div>
+    </section>
+
+    <footer>
+      <a href="index.html">INICIO</a>
+    </footer>
+
+  </main>
+
+  <script>
+    
+    const UNIDADES = { C: "°C", K: "K", F: "°F" };
+    const SIMBOLOS = { "+": "+", "-": "−", "*": "×", "/": "÷" };
+
+  
+    function aCelsius(v, u) {
+      if (u === "K") return v - 273.15;
+      if (u === "F") return (v - 32) * 5 / 9;
+      return v;
+    }
+    function deCelsius(c, u) {
+      if (u === "K") return c + 273.15;
+      if (u === "F") return c * 9 / 5 + 32;
+      return c;
+    }
+    function convertirValor(v, desde, hacia) {
+      return deCelsius(aCelsius(v, desde), hacia);
+    }
+
+    
+
+    function operar(a, b, op) {
+      switch (op) {
+        case "+": return a + b;
+        case "-": return a - b;
+        case "*": return a * b;
+        case "/": return b === 0 ? null : a / b;
+      }
+    }
+
+    
+
+    function formatear(n) {
+      return String(parseFloat(n.toFixed(6)));
+    }
+
+  
+    let entrada = "0";         
+    let acumulado = null;      
+    let operador = null;       
+    let unidad = "C";          
+    let nuevaEntrada = true;   
+    let error = false;
+
+    const valorEl = document.getElementById("valor");
+    const unidadEl = document.getElementById("unidad");
+    const operacionEl = document.getElementById("operacion");
+    const estadoEl = document.getElementById("estado");
+
+    
+
+    function mostrar() {
+      operacionEl.textContent =
+        operador !== null ? `${formatear(acumulado)} ${SIMBOLOS[operador]}` : "";
+
+      if (error) {
+        valorEl.textContent = "Error";
+        unidadEl.textContent = "";
+        estadoEl.textContent = "Error: no se puede dividir entre cero. Pulse C.";
+        estadoEl.className = "aviso-calc resultado-error";
+        return;
+      }
+
+      valorEl.textContent = entrada;
+      unidadEl.textContent = UNIDADES[unidad];
+
+      
+      const kelvin = convertirValor(parseFloat(entrada), unidad, "K");
+      estadoEl.className = "aviso-calc";
+      estadoEl.textContent = kelvin < -1e-9
+        ? "Aviso: el valor está por debajo del cero absoluto (0 K)."
+        : "";
+    }
+
+    function fijarError() {
+      error = true;
+      entrada = "0";
+      acumulado = null;
+      operador = null;
+      nuevaEntrada = true;
+    }
+
+    
+
+    function limpiar() {           
+      entrada = "0";
+      acumulado = null;
+      operador = null;
+      nuevaEntrada = true;
+      error = false;
+    }
+
+    function pulsarDigito(d) {
+      if (error) limpiar();
+      if (nuevaEntrada || entrada === "0") {
+        entrada = d;
+      } else {
+        entrada += d;
+      }
+      nuevaEntrada = false;
+    }
+
+    function pulsarPunto() {
+      if (error) limpiar();
+      if (nuevaEntrada) {
+        entrada = "0.";
+        nuevaEntrada = false;
+      } else if (!entrada.includes(".")) {
+        entrada += ".";
+      }
+    }
+
+    function cambiarSigno() {
+      if (error || entrada === "0") return;
+      entrada = entrada.startsWith("-") ? entrada.slice(1) : "-" + entrada;
+    }
+
+    function borrar() {
+      if (error || nuevaEntrada) return;   
+      entrada = entrada.slice(0, -1);
+      if (entrada === "" || entrada === "-") entrada = "0";
+    }
+
+
+
+    
+    function resolver() {
+      const resultado = operar(acumulado, parseFloat(entrada), operador);
+      if (resultado === null) {
+        fijarError();
+        return false;
+      }
+      entrada = formatear(resultado);
+      acumulado = null;
+      operador = null;
+      nuevaEntrada = true;
+      return true;
+    }
+
+    function pulsarOperador(op) {
+      if (error) return;
+      if (operador !== null && !nuevaEntrada && !resolver()) return;
+      acumulado = parseFloat(entrada);
+      operador = op;
+      nuevaEntrada = true;
+    }
+
+    function pulsarIgual() {
+      if (error || operador === null) return;
+      resolver();
+    }
+
+    
+    function convertir(destino) {
+      if (error || destino === unidad) return;
+
+      if (operador !== null) {
+        if (nuevaEntrada) {          
+          operador = null;
+          acumulado = null;
+        } else if (!resolver()) {   
+          return;
+        }
+      }
+      entrada = formatear(convertirValor(parseFloat(entrada), unidad, destino));
+      unidad = destino;
+      nuevaEntrada = true;
+    }
+
+    document.getElementById("calculadora").addEventListener("click", (e) => {
+      const boton = e.target.closest("button");
+      if (!boton || !boton.dataset.accion) return;
+      const { accion, valor } = boton.dataset;
+
+      switch (accion) {
+        case "digito":   pulsarDigito(valor); break;
+        case "punto":    pulsarPunto(); break;
+        case "op":       pulsarOperador(valor); break;
+        case "igual":    pulsarIgual(); break;
+        case "limpiar":  limpiar(); break;
+        case "borrar":   borrar(); break;
+        case "signo":    cambiarSigno(); break;
+        case "convertir": convertir(valor); break;
+      }
+      mostrar();
+    });
+
+    mostrar();
+  </script>
+</body>
+</html>
