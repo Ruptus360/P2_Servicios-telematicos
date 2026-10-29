@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>Nombre</title>
   <link rel="stylesheet" href="css/iroom.css">
+  <script src="js/tema.js"></script>
 </head>
 
 <body>
@@ -16,6 +17,7 @@
       <ul class="nav-links">
         <li><a href="index.html">Inicio</a></li>
         <li><a href="config.html" target="_blank" rel="noopener noreferrer">Configuracion</a></li>
+        <li><a href="calculadora.html">Calculadora</a></li>
       </ul>
     </nav>
 
@@ -67,7 +69,6 @@
     const inputNombre = document.getElementById("nombre");
     const saludo = document.getElementById("saludo");
 
-    // Recupera fname guardado, si existe
     const guardado = localStorage.getItem("fname");
     if (guardado) inputNombre.value = guardado;
 
@@ -80,12 +81,9 @@
     inputNombre.addEventListener("input", actualizarSaludo);
     actualizarSaludo();
 
-    
-
     const LETRAS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
     const DIGITOS = "0123456789";
 
-    // V1
     function validarCorreoCadenas(correo) {
       const arroba = correo.indexOf("@");
       if (arroba === -1 || arroba !== correo.lastIndexOf("@")) return false;
@@ -118,15 +116,11 @@
       return true;
     }
 
-    // V2
     const REGEX_CORREO = /^[A-Za-z0-9._%+-]+@([A-Za-z0-9-]+\.)+[A-Za-z]{2,}$/;
 
     function validarCorreoRegex(correo) {
       return REGEX_CORREO.test(correo);
     }
-
-    
-
 
     const inputCorreo = document.getElementById("correo");
     const resultadoCorreo = document.getElementById("resultado-correo");
@@ -153,7 +147,6 @@
     document.getElementById("btn-regex")
       .addEventListener("click", () => verificar(validarCorreoRegex, "expresión regular"));
 
-    
     const CASOS = [
       { entrada: "usuario@gmail.com",            esperado: true  },
       { entrada: "nombre.apellidos@edu.uah.es",  esperado: true  },
