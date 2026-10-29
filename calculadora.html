@@ -2,8 +2,9 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Calculadora temperaturas</title>
+  <title>Calculadora de temperaturas</title>
   <link rel="stylesheet" href="css/iroom.css">
+  <script src="js/tema.js"></script>
 </head>
 
 <body>
@@ -25,7 +26,6 @@
     <section class="columna calculadora" id="calculadora" aria-labelledby="titulo-calc">
       <h2 id="titulo-calc">Calculadora</h2>
 
-      <!-- Pantalla: valor y unidad del resultado -->
       <div class="pantalla">
         <p id="operacion" class="operacion"></p>
         <output id="resultado" aria-live="polite">
@@ -34,7 +34,6 @@
       </div>
       <p id="estado" class="aviso-calc" aria-live="polite"></p>
 
-      <!-- Botonera: operaciones básicas -->
       <div class="botonera">
         <button type="button" data-accion="limpiar">C</button>
         <button type="button" data-accion="borrar" aria-label="Borrar último dígito">⌫</button>
@@ -61,13 +60,17 @@
         <button type="button" data-accion="igual" aria-label="Calcular">=</button>
       </div>
 
-      <!-- Conversión directa entre escalas -->
       <div class="conversion">
         <span>Convertir a:</span>
         <button type="button" data-accion="convertir" data-valor="C">°C</button>
         <button type="button" data-accion="convertir" data-valor="K">K</button>
         <button type="button" data-accion="convertir" data-valor="F">°F</button>
       </div>
+
+      <p class="ayuda-teclado">
+        Teclado: <kbd>0</kbd>–<kbd>9</kbd>, <kbd>.</kbd>, <kbd>+</kbd> <kbd>-</kbd> <kbd>*</kbd> <kbd>/</kbd>,
+        <kbd>Enter</kbd> (=), <kbd>Retroceso</kbd> (borrar) y <kbd>Esc</kbd> (limpiar).
+      </p>
     </section>
 
     <footer>
@@ -77,11 +80,9 @@
   </main>
 
   <script>
-    
     const UNIDADES = { C: "°C", K: "K", F: "°F" };
     const SIMBOLOS = { "+": "+", "-": "−", "*": "×", "/": "÷" };
 
-  
     function aCelsius(v, u) {
       if (u === "K") return v - 273.15;
       if (u === "F") return (v - 32) * 5 / 9;
@@ -96,8 +97,6 @@
       return deCelsius(aCelsius(v, desde), hacia);
     }
 
-    
-
     function operar(a, b, op) {
       switch (op) {
         case "+": return a + b;
@@ -107,26 +106,21 @@
       }
     }
 
-    
-
     function formatear(n) {
       return String(parseFloat(n.toFixed(6)));
     }
 
-  
-    let entrada = "0";         
-    let acumulado = null;      
-    let operador = null;       
-    let unidad = "C";          
-    let nuevaEntrada = true;   
+    let entrada = "0";
+    let acumulado = null;
+    let operador = null;
+    let unidad = "C";
+    let nuevaEntrada = true;
     let error = false;
 
     const valorEl = document.getElementById("valor");
     const unidadEl = document.getElementById("unidad");
     const operacionEl = document.getElementById("operacion");
     const estadoEl = document.getElementById("estado");
-
-    
 
     function mostrar() {
       operacionEl.textContent =
@@ -143,7 +137,6 @@
       valorEl.textContent = entrada;
       unidadEl.textContent = UNIDADES[unidad];
 
-      
       const kelvin = convertirValor(parseFloat(entrada), unidad, "K");
       estadoEl.className = "aviso-calc";
       estadoEl.textContent = kelvin < -1e-9
@@ -159,9 +152,7 @@
       nuevaEntrada = true;
     }
 
-    
-
-    function limpiar() {           
+    function limpiar() {
       entrada = "0";
       acumulado = null;
       operador = null;
@@ -195,14 +186,11 @@
     }
 
     function borrar() {
-      if (error || nuevaEntrada) return;   
+      if (error || nuevaEntrada) return;
       entrada = entrada.slice(0, -1);
       if (entrada === "" || entrada === "-") entrada = "0";
     }
 
-
-
-    
     function resolver() {
       const resultado = operar(acumulado, parseFloat(entrada), operador);
       if (resultado === null) {
@@ -229,15 +217,14 @@
       resolver();
     }
 
-    
     function convertir(destino) {
       if (error || destino === unidad) return;
 
       if (operador !== null) {
-        if (nuevaEntrada) {          
+        if (nuevaEntrada) {
           operador = null;
           acumulado = null;
-        } else if (!resolver()) {   
+        } else if (!resolver()) {
           return;
         }
       }
@@ -249,6 +236,7 @@
     document.getElementById("calculadora").addEventListener("click", (e) => {
       const boton = e.target.closest("button");
       if (!boton || !boton.dataset.accion) return;
+      if (e.detail > 0) boton.blur();
       const { accion, valor } = boton.dataset;
 
       switch (accion) {
@@ -262,6 +250,36 @@
         case "convertir": convertir(valor); break;
       }
       mostrar();
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+      const tecla = e.key;
+
+      if (tecla === "Enter" && e.target.closest("button, a")) return;
+
+      let manejada = true;
+      if (tecla.length === 1 && tecla >= "0" && tecla <= "9") {
+        pulsarDigito(tecla);
+      } else if (tecla === "." || tecla === ",") {
+        pulsarPunto();
+      } else if (tecla === "+" || tecla === "-" || tecla === "*" || tecla === "/") {
+        pulsarOperador(tecla);
+      } else if (tecla === "Enter" || tecla === "=") {
+        pulsarIgual();
+      } else if (tecla === "Backspace") {
+        borrar();
+      } else if (tecla === "Escape") {
+        limpiar();
+      } else {
+        manejada = false;
+      }
+
+      if (manejada) {
+        e.preventDefault();
+        mostrar();
+      }
     });
 
     mostrar();
