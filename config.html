@@ -4,12 +4,21 @@
   <meta charset="UTF-8">
   <title>Configuracion</title>
   <link rel="stylesheet" href="css/iroom.css">
- 
+  <script src="js/tema.js"></script>
 </head>
 
 <body>
 <main class="contenedor1">
     <header><h1>SmartRoom Configuration</h1></header>
+
+    <nav aria-label="navegacion principal">
+      <ul class="nav-links">
+        <li><a href="index.html">Inicio</a></li>
+        <li><a href="config.html">Configuracion</a></li>
+        <li><a href="minombre.html">Nombre</a></li>
+        <li><a href="calculadora.html">Calculadora</a></li>
+      </ul>
+    </nav>
 
     <form action="datos" method="post" enctype="multipart/form-data" id="formconfig" class="formulario" novalidate>
 
@@ -57,6 +66,7 @@
 
         <div class="campo-submit">
           <button type="submit" id="btn-enviar">Enviar datos</button>
+          <button type="button" id="btn-borrar-config">Borrar datos guardados</button>
         </div>
     </section>
 
@@ -110,16 +120,15 @@
 </dialog>
 
 <script>
- 
+  const TEMP_OK_MIN = 22;
   const TEMP_OK_MAX = 26;
-  const PW_MIN = 9;             
+  const PW_MIN = 9;
 
   const PW_NIVELES = [
     { min: 9,  max: 11,       texto: "Corta", clase: "nv-1" },
     { min: 12, max: 15,       texto: "Media", clase: "nv-2" },
     { min: 16, max: Infinity, texto: "Larga", clase: "nv-3" }
   ];
-
 
   const form      = document.getElementById('formconfig');
   const pais      = document.getElementById('pais');
@@ -140,15 +149,12 @@
   const modalLista  = document.getElementById('modal-lista');
   const modalCerrar = document.getElementById('modal-cerrar');
 
-  /* ================= Utilidades ================= */
-  // Devuelve un número o NaN si el formato no es válido (admite coma decimal)
   function parseNumero(texto) {
     const t = texto.trim().replace(',', '.');
     if (!/^[+-]?\d+(\.\d+)?$/.test(t)) return NaN;
     return parseFloat(t);
   }
 
-  
   function parseAngulo(texto, esLatitud) {
     const t = texto.trim();
     const limite = esLatitud ? 90 : 180;
@@ -162,7 +168,7 @@
       valor = parseFloat(dec[2]);
       negativo = dec[1] === '-';
     } else if (dms) {
-      if (dms[1] && dms[6]) return NaN;                
+      if (dms[1] && dms[6]) return NaN;
       const letra = (dms[1] || dms[6] || '').toUpperCase();
       if (letra && !letrasValidas.includes(letra)) return NaN;
       const grados = parseFloat(dms[3]);
@@ -178,7 +184,6 @@
     if (valor > limite) return NaN;
     return negativo ? -valor : valor;
   }
-
 
   function parseCoordenadas(texto) {
     const partes = texto.split(',');
@@ -216,11 +221,10 @@
       .map(o => o.value.trim().toLowerCase());
   }
 
-  
   let alContinuar = null;
 
   function mostrarModal(tipo, titulo, mensajes, callback) {
-    modal.className = tipo;              
+    modal.className = tipo;
     modalTitulo.textContent = titulo;
     modalLista.innerHTML = '';
     mensajes.forEach(m => {
@@ -252,7 +256,6 @@
     avisoTemp.textContent = avisoTemperatura();
   });
 
-
   function actualizarIndicador() {
     const len = password.value.length;
     if (len === 0) { pwInd.innerHTML = ''; return; }
@@ -277,7 +280,6 @@
 
   password.addEventListener('input', actualizarIndicador);
 
- 
   function actualizarDiferencia() {
     const maxVal = parseFloat(tempMax.value);
     const minVal = parseFloat(tempMin.value);
@@ -299,12 +301,10 @@
   tempMax.addEventListener('input', actualizarDiferencia);
   tempMin.addEventListener('input', actualizarDiferencia);
 
- 
   function validar() {
-    const errores = [];  
+    const errores = [];
     const avisos = [];
 
-    
     const paisTxt = pais.value.trim().toLowerCase();
     if (paisTxt === '') {
       errores.push({ campo: pais, msg: 'El país es obligatorio.' });
@@ -312,11 +312,9 @@
       errores.push({ campo: pais, msg: 'El país indicado no está en la lista de países permitidos.' });
     }
 
-    
     if (ciudad.value.trim() === '') {
       errores.push({ campo: ciudad, msg: 'La ciudad es obligatoria.' });
     }
-
 
     if (gps.value.trim() !== '' && !parseCoordenadas(gps.value)) {
       errores.push({ campo: gps, msg: 'Las coordenadas GPS no son válidas. Use "latitud, longitud" en grados decimales (40.5133, -3.3494) o en grados, minutos y segundos (N 40º 30\' 45.00", O 3º 20\' 54.00"). Latitud entre -90 y 90, longitud entre -180 y 180.' });
@@ -333,7 +331,6 @@
       }
     }
 
-    
     if (password.value === '') {
       errores.push({ campo: password, msg: 'La contraseña es obligatoria.' });
     } else if (password.value.length < PW_MIN) {
@@ -349,7 +346,6 @@
       if (aviso) avisos.push(aviso);
     }
 
-   
     const maxTxt = tempMax.value.trim();
     const minTxt = tempMin.value.trim();
     const maxVal = parseFloat(maxTxt);
@@ -379,13 +375,74 @@
     }
 
     if (avisos.length > 0) {
-      
-      mostrarModal('aviso', 'Advertencia', avisos, () => form.submit());
+      mostrarModal('aviso', 'Advertencia', avisos, registrar);
       return;
     }
 
-    form.submit();
+    registrar();
   });
+
+  const CLAVE_CONFIG = 'config_smartroom';
+
+  function guardarConfig() {
+    const datos = {
+      pais: pais.value.trim(),
+      ciudad: ciudad.value.trim(),
+      gps: gps.value.trim(),
+      mapaUrl: mapaUrl.value.trim(),
+      sensores: Array.from(document.querySelectorAll('input[name="sensor"]:checked'))
+                     .map(c => c.value),
+      tempActual: tempActual.value.trim(),
+      tempMax: tempMax.value.trim(),
+      tempMin: tempMin.value.trim(),
+      guardado: new Date().toISOString()
+    };
+    try {
+      localStorage.setItem(CLAVE_CONFIG, JSON.stringify(datos));
+    } catch (e) {}
+  }
+
+  function cargarConfig() {
+    let datos = null;
+    try {
+      datos = JSON.parse(localStorage.getItem(CLAVE_CONFIG));
+    } catch (e) { return; }
+    if (!datos || typeof datos !== 'object') return;
+
+    const texto = v => (typeof v === 'string' ? v : '');
+    pais.value       = texto(datos.pais);
+    ciudad.value     = texto(datos.ciudad);
+    gps.value        = texto(datos.gps);
+    mapaUrl.value    = texto(datos.mapaUrl);
+    tempActual.value = texto(datos.tempActual);
+    tempMax.value    = texto(datos.tempMax);
+    tempMin.value    = texto(datos.tempMin);
+
+    const sensores = Array.isArray(datos.sensores) ? datos.sensores : [];
+    document.querySelectorAll('input[name="sensor"]').forEach(c => {
+      c.checked = sensores.includes(c.value);
+    });
+
+    actualizarEnlaceGps();
+    avisoTemp.textContent = avisoTemperatura();
+    actualizarDiferencia();
+  }
+
+  function registrar() {
+    guardarConfig();
+    form.submit();
+  }
+
+  document.getElementById('btn-borrar-config').addEventListener('click', () => {
+    try { localStorage.removeItem(CLAVE_CONFIG); } catch (e) {}
+    form.reset();
+    actualizarEnlaceGps();
+    avisoTemp.textContent = '';
+    actualizarDiferencia();
+    actualizarIndicador();
+  });
+
+  cargarConfig();
 </script>
 
 </body>
